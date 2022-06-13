@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <form action="http://localhost:3000/instagramUser/resetPassword/<%= forgotPasswordToken %>" method="post">
+
+        <h1>
+            <center>Reset Your Password Here</center>
+        </h1>
+        <center>
+            <label>New Password:</label>
+            <input type="password" name="newPass">
+            <br>
+            <br>
+            <br>
+            <label>Re type Password:</label>
+            <input type="password" name="rnewPass">
+            <br>
+            <br>
+            <br>
+
+            <button type="submit"> Reset password</button>
+        </center>
+    </form>
+</body>
+
+</html>

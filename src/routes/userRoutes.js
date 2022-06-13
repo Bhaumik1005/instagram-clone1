@@ -1,35 +1,66 @@
 const router = require("express").Router();
-const {validateUser,validateUserLogin, validateUpdatedData} = require("../middleware/validation");
-const {multer1} = require("../middleware/uploadProfile");
-const {signup, VerifyUserEmail, userLogin, userProfile,updateUserProfilePic, updateUserProfile} = require("../controller/userController")
+const {
+  validateRegisterUser,
+  validateUserLogin,
+  validateUpdatedData,
+  validateForgotPassword,
+  validateResetPassword,
+} = require("../middleware/validation");
+const { multer1 } = require("../middleware/uploadProfile");
+const {
+  signup,
+  verifyUserEmail,
+  userLogin,
+  userProfile,
+  updateProfilePicture,
+  updateUserProfile,
+  forgotPassword,
+  resetTemp,
+  resetPassword,
+} = require("../controller/userController");
 const passport = require("passport"); //Authentication Middleware
-const multer = require('multer')
+const multer = require("multer");
 const upload = multer();
-require('../middleware/passport');
+require("../middleware/passport");
 
-// const jwt = require('jsonwebtoken'); //For JSON Webtoken
 // validateUserData,validateUserData.validateUser,
-router.post("/signup",multer1,validateUser, signup);
+router.post("/signup", multer1, validateRegisterUser, signup);
 
 //For Validate User E-mail
-router.post("/verifyuseremail/:priEmailToken", VerifyUserEmail);
+router.post("/verifyuseremail/:priEmailToken", verifyUserEmail);
 
 //For Login User With Email And Password
-// login
-router.post("/", upload.none(),validateUserLogin,userLogin)
+router.post("/login", validateUserLogin, userLogin);
 
 //For Display User Profile
-// getProfile
-router.get("/",passport.authenticate('jwt', {session: false}),  userProfile)
+router.get(
+  "/getProfile",
+  passport.authenticate("jwt", { session: false }),
+  userProfile
+);
 
 //For Update User ProfilePic
-// updateProfilePic ,passport.authenticate('jwt', {session: false}),
-router.put("/",multer1, updateUserProfilePic)
- 
+router.put("/updateProfilePicture", multer1, updateProfilePicture);
 
 //For Update User Profile Data
-router.put("/updateProfile",passport.authenticate('jwt', {session: false}),upload.none(),validateUpdatedData,updateUserProfile)
+router.put(
+  "/updateProfile",
+  passport.authenticate("jwt", { session: false }),
+  validateUpdatedData,
+  updateUserProfile
+);
 
+//For Forgot the password
+router.post("/forgotPassword", validateForgotPassword, forgotPassword);
 
+//For REset password Template
+router.get("/resetTemplate/:forgotPasswordToken", resetTemp);
+
+//For Reset User Password
+router.post(
+  "/resetPassword/:forgotPasswordToken",
+  validateResetPassword,
+  resetPassword
+);
 
 module.exports = router;
