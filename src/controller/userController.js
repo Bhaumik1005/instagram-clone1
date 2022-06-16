@@ -127,7 +127,7 @@ exports.userLogin = async (req, res) => {
     if (user1 && validPassword && user1.isEmailValide) {
       let payload = { id: user1._id };
       let token = jwt.sign(payload, process.env.JWTSECRATE, {
-        expiresIn: "1h",
+        expiresIn: "24h",
       });
 
       res.status(201).send({
