@@ -6,23 +6,23 @@ const fs = require("fs"); //For Using File System
 const bcrypt = require("bcrypt"); //For Create Hash password
 const jwt = require("jsonwebtoken"); //For Using JSON web Token
 const mailer = require("../services/nodemailer");
+const Compression = require("../utils/imageCompression");
+const logger = require("../utils/logger").logger;
 
-//For User SignUp Page
+
+/*User SignUp Page Logic*/
 exports.signup = async (req, res) => {
   try {
-    const img = fs.readFileSync(req.file.path);
-
-    const encode_img = img.toString("base64");
-
-    const finalImg = {
-      contentType: req.file.mimetype,
-      image: new Buffer.from(encode_img, "base64"),
-    };
+    const finalImg = req.file;
 
     if (finalImg) {
+      /* Image Compression Logic */
+      const ImageLink = await Compression.imageCompression(finalImg);
+
       const user = new userModel(req.body);
       const name = user.name;
 
+      /*Find User In DB*/
       const checkEmail = await userModel.findOne({ email: req.body.email });
 
       if (checkEmail) {
@@ -30,41 +30,31 @@ exports.signup = async (req, res) => {
           message: "Email already Registered",
         });
       } else {
-        const priEmailToken = randomString(
-          32,
-          "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-        );
+        /* Generate Email Token */
+        const emailToken = Math.random().toString(6).substring(2);
+        user.emailToken = emailToken;
+        user.profilePic = ImageLink;
 
-        function randomString(length, chars) {
-          let result = "";
-          for (let i = length; i > 0; --i)
-            result += chars[Math.floor(Math.random() * chars.length)];
-
-          return result;
-        }
-
-        user.priEmailToken = priEmailToken;
-        user.profilePic = req.file.filename;
-
-        //Hash Password Generator
+        /*Hash Password Generator */
         const salt = await bcrypt.genSalt(10); // generate salt to hash password
         password = await bcrypt.hash(user.password, salt); // now we set user password to hashed password
         user.password = password;
         await user.save();
 
-        //For Add HTML Template
+        /*For Add HTML Template */
         const HTMlTEMP = await ejs.renderFile(
           path.join(__dirname, "../view/pages/validation.ejs"),
-          { priEmailToken, name }
+          { emailToken, name }
         );
 
+        /*Add E-Mail Data */
         const data = {
           to: user.email,
           HTML: HTMlTEMP,
           subject: "Validate User E-mail",
         };
 
-        //E-mailFunctinality
+        /* Add E-mailFunctinality */
         mailer.mailer(data);
 
         return res.status(201).send({
@@ -78,54 +68,63 @@ exports.signup = async (req, res) => {
     }
   } catch (error) {
     res.status(500).send({ error: error.message });
-    console.log(error);
+    logger.error(`${res.status}- ${res.statusMessage} - ${req.originalUrl} - ${req.method} - ${req.ip}`);
   }
 };
 
-// For Validate the user Email
+/*User Email validation Logic*/
 exports.verifyUserEmail = async (req, res) => {
   try {
-    const emailToken = await userModel.findOne({
-      priEmailToken: req.params.priEmailToken,
+    /*Find User Using Email Token */
+    const findUser = await userModel.findOne({
+      emailToken: req.params.emailToken,
     });
 
-    if (req.params.priEmailToken === emailToken.priEmailToken) {
+    if (findUser) {
+      /*Update Email Validation And Delete Email Token*/
       const updateToken = await userModel.findOneAndUpdate(
-        { _id: emailToken._id },
+        { _id: findUser._id },
         {
           $set: { isEmailValide: true },
-          $unset: { priEmailToken: "" },
+          $unset: { emailToken: "" },
         }
       );
 
+      if (updateToken) {
+        res.status(201).send({
+          message:
+            "Succesfully Verified your E-mail. Login With Your Email and Password",
+        });
+      }
+    } else {
       res.status(201).send({
-        message:
-          "Succesfully Verified your E-mail. Login With Your Email and Password",
+        message: "Your Email Token Is Wrong",
       });
     }
   } catch (error) {
     console.log(error);
-    res.status(500).send(error);
+    res.status(500).send({ error: error.message });
   }
 };
 
-//For Login the User
+/*Login User Logic*/
 exports.userLogin = async (req, res) => {
   try {
-    //Find user In DB
+    /* Find user In DB*/
     const user1 = await userModel.findOne({
       email: req.body.email,
     });
 
-    // check user password with hashed password stored in the database
+    /*check user password with hashed password stored in the database*/
     const validPassword = await bcrypt.compare(
       req.body.password,
       user1.password
     );
 
-    //if Valide Credential user Login
+    /*Check User Credential for Login */
     if (user1 && validPassword && user1.isEmailValide) {
       let payload = { id: user1._id };
+
       let token = jwt.sign(payload, process.env.JWTSECRATE, {
         expiresIn: "24h",
       });
@@ -140,26 +139,22 @@ exports.userLogin = async (req, res) => {
       });
     }
   } catch (error) {
-    console.log(error);
     return res.status(401).send({
-      message: "Invalid Credentials",
+      error: error.message,
     });
   }
 };
 
-//For Display User Profile
+/*Display User Profile Logic*/
 exports.userProfile = async (req, res) => {
   try {
     let user = req.user;
-    user.profilePic =
-      "http://192.168.20.20:3000/uploadUserProfile/" + user.profilePic;
 
     res.status(201).send({
       message: "User Data",
       data: user,
     });
   } catch (error) {
-    console.log(error);
     res.send({
       message: "Unauthorized User",
       error: error.message,
@@ -167,28 +162,33 @@ exports.userProfile = async (req, res) => {
   }
 };
 
-//For Update User ProfilePicture
+/*Update Profile Picture Logic */
 exports.updateProfilePicture = async (req, res) => {
   try {
-    // Fetch the user by id
-    const user = req.body.email;
-
-    //Multer Function
-    const img = fs.readFileSync(req.file.path);
-    const encodeImg = img.toString("base64");
-    const finalImg = {
-      contentType: req.file.mimetype,
-      image: new Buffer.from(encodeImg, "base64"),
-    };
+    const user = req.user;
+    const finalImg = req.file;
 
     if (finalImg) {
+      /* Image Compression Logic */
+      const ImageLink = await Compression.imageCompression(finalImg);
+
+      /*Update Profile Picture */
+      let updateProfile = await userModel.findByIdAndUpdate(
+        { _id: user._id },
+        {
+          $set: {
+            profilePic: ImageLink,
+          },
+        },
+        { new: true }
+      );
       res.status(201).send({
         message: "Profile Updated Successfully",
+        updateProfile,
       });
     } else {
       res.status(401).send({
         message: "Profile not Updated",
-        error: error.message,
       });
     }
   } catch (error) {
@@ -199,8 +199,8 @@ exports.updateProfilePicture = async (req, res) => {
   }
 };
 
-//For Update User Profile Data
-exports.updateUserProfile = async function updateUserProfile(req, res) {
+/*Update User Profile Data Logic */
+exports.updateUserProfile = async (req, res) => {
   try {
     const user = req.user;
 
@@ -239,38 +239,31 @@ exports.updateUserProfile = async function updateUserProfile(req, res) {
   }
 };
 
-//For Forgot passowrd
+/*Forgot Password Logic*/
 exports.forgotPassword = async (req, res) => {
   try {
     const user = await userModel.findOne({ email: req.body.email });
 
-    let forgotPasswordToken = randomString(
-      30,
-      "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-    );
-    function randomString(length, chars) {
-      let result = "";
-      for (let i = length; i > 0; --i)
-        result += chars[Math.floor(Math.random() * chars.length)];
-
-      return result;
-    }
-    user.forgotPasswordToken = forgotPasswordToken;
-    await user.save();
-
     if (user) {
-      //For Add HTML Template
+      /*Generate Forgot Password Token*/
+      let forgotPasswordToken = Math.random().toString(13).substring(2);
+      user.forgotPasswordToken = forgotPasswordToken;
+      await user.save();
+
+      /*ForgotPassword  HTML Template*/
       const HTMLTEMP = await ejs.renderFile(
         path.join(__dirname, "../view/pages/forgot.ejs"),
         { forgotPasswordToken }
       );
 
+      /*User Mail Data */
       const data = {
         to: user.email,
         HTML: HTMLTEMP,
         subject: "Forgot Password",
       };
 
+      /*Mail Function Call */
       mailer.mailer(data);
 
       res.send({
@@ -282,37 +275,45 @@ exports.forgotPassword = async (req, res) => {
       });
     }
   } catch (error) {
-    console.log("Error", error);
+    res.send({
+      Error: error.message,
+    });
   }
 };
 
-//For Reset password Template
+/*Render Reset Password Template */
 exports.resetTemp = async (req, res) => {
-  let forgotPasswordToken = req.params.forgotPasswordToken;
+  try {
+    let forgotPasswordToken = req.params.forgotPasswordToken;
 
-  //TO render reset password Template
-  res.render(
-    path.resolve(
-      path.join(__dirname, "../../src/view/pages/resetTemplate.ejs")
-    ),
-    { forgotPasswordToken: forgotPasswordToken }
-  );
+    /*render reset password Template */
+    res.render(
+      path.resolve(
+        path.join(__dirname, "../../src/view/pages/resetTemplate.ejs")
+      ),
+      { forgotPasswordToken: forgotPasswordToken }
+    );
+  } catch (error) {
+    res.send({
+      Error: error.message,
+    });
+  }
 };
 
-//For Reset Your Password Functionality
+/*Reset Password Logic */
 exports.resetPassword = async (req, res) => {
   try {
     const oldPassword = req.body.oldPass;
     const newPassword = req.body.newPass;
     const retypenewPassword = req.body.rnewPass;
 
-    //Check Token in DB
+    /*Forgot Password Token Check in DB*/
     let checkToken = await userModel.findOne({
       forgotPasswordToken: req.params.forgotPasswordToken,
     });
 
     if (checkToken) {
-      //Check new and old password Diffrent
+      /*Check Old and New Password are Diffrent*/
       const validPassword = await bcrypt.compare(
         newPassword,
         checkToken.password
@@ -322,12 +323,14 @@ exports.resetPassword = async (req, res) => {
         res.send({ message: "Your Old And New Password are Same" });
       } else {
         if (newPassword === retypenewPassword) {
-          // generate salt to hash password
+          /* generate salt to hash password*/
           const salt = await bcrypt.genSalt(10);
-          // now we set user password to hashed password
+
+          /*now we set user password to hashed password*/
           setnewPassword = await bcrypt.hash(newPassword, salt);
 
-          //Update User Password
+    
+          /* Update User Password*/
           const updatePass = await userModel.findByIdAndUpdate(
             { _id: checkToken._id },
             { $set: { password: setnewPassword } }
@@ -346,6 +349,6 @@ exports.resetPassword = async (req, res) => {
       res.send({ message: "Your Your Token Not Valide" });
     }
   } catch (error) {
-    res.send({ error: error });
+    res.send({ error: error.message });
   }
 };

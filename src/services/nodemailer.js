@@ -1,17 +1,21 @@
 const nodemailer = require("nodemailer"); //Email Service Provider
+const dotenv = require("dotenv").config();
+const userEmail = process.env.UserEmail;
+const userPass = process.env.UserPass;
 
-//Email Functionality
+//Create Email Transporter 
 const transporter = nodemailer.createTransport({
   service: "gmail",
   auth: {
-    user: "bhaumikjoshi1052@gmail.com",
-    pass: "ytfzekwoyuatxbzb",
+    user: userEmail,
+    pass: userPass,
   },
 });
 
+//Email Function 
 exports.mailer = (data) => {
   const mailOptions = {
-    from: "bhaumikjoshi1052@gmail.com",
+    from: userEmail,
     to: data.to,
     subject: data.subject,
     html: data.HTML,

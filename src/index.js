@@ -10,6 +10,7 @@ const path = require("path");
 const PORT = process.env.PORTNUM;
 const passport = require("passport"); //Authentication Middleware
 require("./db/mongoconnection").DbConnection(); //Connecting DB
+const logger = require("./utils/logger").logger;
 
 app.use(passport.initialize());
 app.set("view engine", "ejs");
@@ -38,14 +39,18 @@ app.use("/commentRoute", commentRoute);
 
 //For Set Static Profile Route
 app.use(
-  "/uploadUserProfile/",
-  express.static(path.join(__dirname, "../uploadUserProfile"))
+  "/uploadUserProfile/resized",
+  express.static(path.join(__dirname, "../uploadUserProfile/resized"))
 );
 
-//For Set Static Profile Route
+//For Set Static Post Route
 app.use(
-  "/userPost/",
-  express.static(path.join(__dirname, "../uploadUserPost"))
+  "/uploadUserPost/resizedPost",
+  express.static(path.join(__dirname, "../uploadUserPost/resizedPost"))
 );
+
 //For Listen Server At Define Port
-app.listen(PORT, () => console.log("Server is running.... at", { PORT }));
+app.listen(PORT, () => {
+    console.log(`Server started and running at ${PORT}`),
+    logger.info(`Server started and running at ${PORT}`);
+});

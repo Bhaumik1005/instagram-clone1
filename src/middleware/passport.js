@@ -14,6 +14,7 @@ const jwtOptions = {
 
 // Passportjs JWT Strategy
 const strategy = new JwtStrategy(jwtOptions, (jwt_payload, next) => {
+
   userModel.findOne(
     { _id: jwt_payload.id },
     {

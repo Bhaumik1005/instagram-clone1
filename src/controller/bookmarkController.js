@@ -1,29 +1,37 @@
 const bookmarkModel = require("../model/bookmarkModel");
 const postModel = require("../model/postModel");
-
+ 
+/*Bookmark Post Logic*/
 exports.bookmarkPost = async (req, res) => {
-  const existBookmark = await bookmarkModel.findOne({
-    userId: req.user._id,
-    bookmarkPostId: req.body.postId,
-  });
-
-  if (existBookmark) {
-    res.send({
-      message: "You Already Saved This Post",
+  try {
+    const existBookmark = await bookmarkModel.findOne({
+      userId: req.user._id,
+      bookmarkPostId: req.body.postId,
     });
-  } else {
-    const addBookmark = new bookmarkModel();
 
-    addBookmark.userId = req.user._id;
-    addBookmark.bookmarkPostId = req.body.postId;
-    await addBookmark.save();
+    if (existBookmark) {
+      res.send({
+        message: "You Already Saved This Post",
+      });
+    } else {
+      const addBookmark = new bookmarkModel();
 
+      addBookmark.userId = req.user._id;
+      addBookmark.bookmarkPostId = req.body.postId;
+      await addBookmark.save();
+
+      res.send({
+        message: "Your Post Saved",
+      });
+    }
+  } catch (error) {
     res.send({
-      message: "Your Post Saved",
+      Error: error.message,
     });
   }
 };
 
+/*Get ALL Bookmark Logic */
 exports.getUserAllBookmark = async (req, res) => {
   try {
     const userAllBookmark = await bookmarkModel.find({ userId: req.user._id });
@@ -38,7 +46,6 @@ exports.getUserAllBookmark = async (req, res) => {
 
         getPost.push(Post);
       }
-  
 
       if (getPost) {
         const userData = [];
@@ -72,6 +79,7 @@ exports.getUserAllBookmark = async (req, res) => {
   }
 };
 
+/*Get User Specific Bookmark Logic*/
 exports.getBookmark = async (req, res) => {
   try {
     const userBookmark = await bookmarkModel.findOne({
@@ -104,11 +112,12 @@ exports.getBookmark = async (req, res) => {
     }
   } catch (error) {
     res.send({
-      Error: error,
+      Error: error.message,
     });
   }
 };
 
+/*Delete User Specific Bookmark */
 exports.deleteBookmark = async (req, res) => {
   try {
     const userBookmark = await bookmarkModel.findOne({
@@ -130,7 +139,7 @@ exports.deleteBookmark = async (req, res) => {
     }
   } catch (error) {
     res.send({
-      Error: error,
+      Error: error.message,
     });
   }
 };

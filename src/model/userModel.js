@@ -28,7 +28,7 @@ const UserSchema = new mongoose.Schema(
     profilePic: {
       type: String,
     },
-    priEmailToken: {
+    emailToken: {
       type: String,
     },
     isEmailValide: {

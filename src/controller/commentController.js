@@ -1,19 +1,17 @@
-const { find, findOneAndUpdate } = require("../model/commentModel");
 const commentModel = require("../model/commentModel");
 
-//For Add Comment
+/*Add Comment into Post Logic */
 exports.comment = async (req, res) => {
   try {
-    var postId = req.body.postId;
-    var message = req.body.message;
-
     const commentId =
       Math.random().toString(36).substring(2, 15) +
       Math.random().toString(36).substring(2, 15);
 
-    let checkPost = await commentModel.findOne({ postId: req.body.postId });
+    let findPostComment = await commentModel.findOne({
+      postId: req.body.postId,
+    });
 
-    if (checkPost) {
+    if (findPostComment) {
       const addNewComment = await commentModel.findOneAndUpdate(
         {
           postId: req.body.postId,
@@ -34,7 +32,7 @@ exports.comment = async (req, res) => {
         message: "Your Comment Added",
       });
     } else {
-      var comments = {
+      let comments = {
         commentId: commentId,
         message: req.body.message,
         userId: req.user._id,
@@ -59,13 +57,12 @@ exports.comment = async (req, res) => {
   }
 };
 
-//For Get All comment For SPecificPost
+/* Get All comment For SPecificPost Logic*/
 exports.getallComment = async (req, res) => {
   try {
     const getallComment = await commentModel.findOne({
       postId: req.body.postId,
     });
-    console.log(getallComment);
 
     res.send({
       data: getallComment.comments,
@@ -77,7 +74,7 @@ exports.getallComment = async (req, res) => {
   }
 };
 
-//For Edit the Specific Comment
+/* Edit the Specific Comment Logic*/
 exports.editComment = async (req, res) => {
   try {
     const editComment = await commentModel.findOneAndUpdate(
@@ -104,24 +101,41 @@ exports.editComment = async (req, res) => {
   }
 };
 
-//For Delete The Specific Comment
+/*Delete The Specific Comment Logic */
 exports.deleteComment = async (req, res) => {
   try {
-    const deleteComment = await commentModel.updateOne(
-      {},
-      {
-        $pull: {
-          comments: {
-            commentId: req.body.commentId,
-            userId: req.user._id,
-          },
-        },
-      }
-    );
+    let countComment = await commentModel.findOne({ postId: req.body.postId });
+    console.log(countComment);
+    if (countComment.comments.length == 1) {
+      const deleteComment = await commentModel.deleteMany({
+        postId: req.body.postId},{
+        comments: req.body.commentId,
+        commentReply:req.body.commentId
+      });
 
-    res.send({
-      message: "Your Comment Delete",
-    });
+      res.send({
+        message: "Your Comment Delete",
+      });
+    } else {
+      const deleteComment = await commentModel.updateOne(
+        {},
+        {
+          $pull: {
+            comments: {
+              commentId: req.body.commentId,
+              userId: req.user._id,
+            },commentReply: {
+              commentId: req.body.commentId,
+              userId: req.user._id
+            }
+          },
+        }
+      );
+
+      res.send({
+        message: "Your Comment Delete",
+      });
+    }
   } catch (error) {
     res.send({
       Error: error.message,
@@ -129,7 +143,7 @@ exports.deleteComment = async (req, res) => {
   }
 };
 
-//For Add Replay In comment
+/*Add Replay In comment Logic*/
 exports.commentReply = async (req, res) => {
   try {
     const replyId = Math.random().toString(36).substring(2, 15);
@@ -158,7 +172,7 @@ exports.commentReply = async (req, res) => {
         {
           "comments.commentId": req.body.commentId,
         },
-        { $set: updateQuery },
+        { $push: updateQuery },
         { new: true, upsert: true }
       );
 
@@ -178,7 +192,7 @@ exports.commentReply = async (req, res) => {
   }
 };
 
-//For Edit Specific Reply
+/*Edit Specific Reply Logic */
 exports.editCommentReply = async (req, res) => {
   try {
     const commentId = req.body.commentId;
@@ -205,16 +219,17 @@ exports.editCommentReply = async (req, res) => {
     });
   } catch (error) {
     res.send({
-      Error: error,
+      Error: error.message,
     });
   }
 };
 
-//For Delete Specific Reply
+/*Delete Specific Reply Logic */
 exports.deleteCommentReply = async (req, res) => {
   try {
     const commentId = req.body.commentId;
     const replyId = req.body.replyId;
+
     const CommentReply = await commentModel.findOne({
       postId: req.body.postId,
       commentReply: {

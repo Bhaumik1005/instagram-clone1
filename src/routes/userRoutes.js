@@ -23,26 +23,31 @@ const multer = require("multer");
 const upload = multer();
 require("../middleware/passport");
 
-// validateUserData,validateUserData.validateUser,
+//Signup Route
 router.post("/signup", multer1, validateRegisterUser, signup);
 
-//For Validate User E-mail
-router.post("/verifyuseremail/:priEmailToken", verifyUserEmail);
+//Validate User E-mail Route
+router.post("/verifyuseremail/:emailToken", verifyUserEmail);
 
-//For Login User With Email And Password
+//Login Route
 router.post("/login", validateUserLogin, userLogin);
 
-//For Display User Profile
+//Display User Profile Route
 router.get(
   "/getProfile",
   passport.authenticate("jwt", { session: false }),
   userProfile
 );
 
-//For Update User ProfilePic
-router.put("/updateProfilePicture", multer1, updateProfilePicture);
+//Update User ProfilePicture Route
+router.put(
+  "/updateProfilePicture",
+  passport.authenticate("jwt", { session: false }),
+  multer1,
+  updateProfilePicture
+);
 
-//For Update User Profile Data
+//Update User Profile Data Route
 router.put(
   "/updateProfile",
   passport.authenticate("jwt", { session: false }),
@@ -50,13 +55,13 @@ router.put(
   updateUserProfile
 );
 
-//For Forgot the password
+//Forgot password Route
 router.post("/forgotPassword", validateForgotPassword, forgotPassword);
 
-//For REset password Template
+//Reset password Template Route
 router.get("/resetTemplate/:forgotPasswordToken", resetTemp);
 
-//For Reset User Password
+//Reset User Password Route
 router.post(
   "/resetPassword/:forgotPasswordToken",
   validateResetPassword,

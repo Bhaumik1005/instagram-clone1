@@ -3,7 +3,7 @@ const multer = require("multer"); //For Uploading Multipart FormData
 //For Uploading Profile in Local Folder
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "uploadUserPost");
+    cb(null, "uploadUserPost/");
   },
   filename: async (req, file, cb) => {
     cb(null, Date.now() + "_" + req.user._id.valueOf() + "_" + "Post.png");
@@ -13,7 +13,7 @@ const storage = multer.diskStorage({
 //For Accept Profile Type
 const profileType = ["image/png", "image/jpg", "image/jpeg"];
 
-//Multr Logic
+//Multer Logic
 exports.uploadPostMulter = multer({
   storage: storage,
   fileFilter: (req, file, cb) => {
@@ -25,5 +25,5 @@ exports.uploadPostMulter = multer({
     }
   },
 
-  limits: { fileSize: 100000000 },
+  limits: { fileSize: 5000000 },
 }).array("post");

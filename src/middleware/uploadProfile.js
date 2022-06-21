@@ -1,21 +1,27 @@
 const multer = require("multer"); //For Uploading Multipart FormData
+const path = require("path"); //For used Specific Path
 
 //For Uploading Profile in Local Folder
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, "uploadUserProfile");
+    cb(null, "uploadUserProfile/");
   },
+
   filename: async (req, file, cb) => {
-    cb(null, req.body.email + "_" + "profilePic.png");
+    cb(
+      null,
+      file.fieldname + "-" + Date.now() + path.extname(file.originalname)
+    );
   },
 });
 
-//For Accept Profile Type
+//For Accept Profile Picture Type
 const profileType = ["image/png", "image/jpg", "image/jpeg"];
 
-//Multr Logic
+//Multer Logic
 exports.multer1 = multer({
   storage: storage,
+
   fileFilter: (req, file, cb) => {
     if (profileType.includes(file.mimetype)) {
       cb(null, true);
@@ -25,5 +31,5 @@ exports.multer1 = multer({
     }
   },
 
-  limits: { fileSize: 100000000 },
+  limits: { fileSize: 5000000 },
 }).single("profilePic");

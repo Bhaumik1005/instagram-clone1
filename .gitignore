@@ -1,5 +1,5 @@
 node_modules
 .env
 db
-uploadUserPost
-uploadUserProfile
+uploadUserProfile/resized
+uploadUserPost/resizedPost

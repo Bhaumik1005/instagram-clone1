@@ -1,108 +1,137 @@
 const postModel = require("../model/postModel");
 const fs = require("fs"); //For Using File System
-const mongoObjectId = require("mongodb");
-//Upload Post From User
+const Compression = require("../utils/imageCompression"); //PostImage Compression Logic File
+const path = require("path");
+
+/*User Instagram Post Logic*/
 exports.uploadPost = async (req, res) => {
-  const post = new postModel(JSON.parse(JSON.stringify(req.body)));
-  post.userId = req.user._id;
+  try {
+    const post = new postModel(JSON.parse(JSON.stringify(req.body)));
+    post.userId = req.user._id;
 
-  let postname = [];
-  for (let i = 0; i < req.files.length; i++) {
-    postname.push(req.files[i].filename);
-  }
-  post.postName = postname;
-  await post.save();
-
-  res.send({
-    message: "Post Successfully",
-  });
-};
-
-//Get All Post From Specific User
-exports.getUserAllPost = async (req, res) => {
-  const userId = req.user._id.toString();
-
-  const data = await postModel.find(
-    { userId: userId },
-    { postName: true, location: true, caption: true, likes: true }
-  );
-
-  const userData = [];
-
-  //For Get User Post data
-  for (i = 0; i < data.length; i++) {
-    for (j = 0; j < data[i].postName.length; j++) {
-      data[i].postName[j] =
-        "http://Localhost:3000/userPost/" + data[i].postName[j];
+    let postname = [];
+    for (let i = 0; i < req.files.length; i++) {
+      /* Image Compression Logic */
+      const ImageLink = await Compression.postCompression(req.files[i]);
+      postname.push(ImageLink);
     }
-    userData.push(data[i]);
+
+    post.postName = postname;
+    await post.save();
+
+    res.send({
+      message: "Post Successfully",
+    });
+  } catch (error) {
+    res.send({
+      Error: error.message,
+    });
   }
-
-  res.send({
-    Message: "User Data",
-    data: userData,
-  });
 };
 
-//Edit User Specific Post
+/*Get All Post From Specific User Logic*/
+exports.getUserAllPost = async (req, res) => {
+  try {
+    const userId = req.user._id.toString();
+
+    const data = await postModel.find(
+      { userId: userId },
+      { postName: true, location: true, caption: true, likes: true }
+    );
+
+    res.send({
+      Message: "User Data",
+      data: data,
+    });
+  } catch (error) {
+    res.send({
+      Error: error.message,
+    });
+  }
+};
+
+/*Edit User Specific Post*/
 exports.editUserPost = async (req, res) => {
-  const editData = await postModel.findOneAndUpdate(
-    { _id: req.body.postId },
-    { $set: { location: req.body.location, caption: req.body.caption } },
-    { new: true }
-  );
-  console.log("editData", editData);
-  res.send({
-    message: "User Post Data Update",
-    data: editData,
-  });
+  try {
+    const editData = await postModel.findOneAndUpdate(
+      { _id: req.body.postId },
+      { $set: { location: req.body.location, caption: req.body.caption } },
+      { new: true }
+    );
+
+    res.send({
+      message: "User Post Data Update",
+      data: editData,
+    });
+  } catch (error) {
+    res.send({
+      Error: error.message,
+    });
+  }
 };
 
-//Delete User Specific post
+/*Delete User Specific post*/
 exports.deleteUserPost = async (req, res) => {
-  const deletePost = await postModel.find({ _id: req.body.postId });
+  try {
+    const deletePost = await postModel.findOne({ _id: req.body.postId });
 
-  for (i = 0; i < deletePost.length; i++) {
-    for (j = 0; j < deletePost[i].postName.length; j++) {
-      const filePath =
-        "../instagram-clone1/uploadUserPost/" + deletePost[i].postName[j];
+    if (deletePost) {
+      for (i = 0; i <= deletePost.postName.length; i++) {
+        let postName = deletePost.postName[i].split("/")[5];
 
-      await fs.unlink(filePath, (err) => {
-        if (err) {
-          console.error(err);
-        }
+        let filePath = path.join(
+          __dirname,
+          "../../uploadUserPost/resizedPost/" + postName
+        );
+
+        await fs.unlink(filePath, (err) => {
+          console.log(err);
+        });
+      }
+
+      const deletePostDb = await postModel.deleteOne({
+        _id: req.body.postId,
+      });
+
+      if (deletePostDb.deletedCount > 0) {
+        res.send({
+          message: "Delete Sucessfully",
+        });
+      } else {
+        res.send({
+          message: "Can't Delete Post",
+        });
+      }
+    } else {
+      res.send({
+        message: "Can't Find Your Post",
       });
     }
+  } catch (error) {
+    res.send({
+      Error: error.message,
+    });
   }
-
-  const deletepost = await postModel.deleteOne({ _id: req.body.postId });
-
-  res.send({
-    message: "Delete Sucessfully",
-  });
 };
 
-//Get All Db Post
+/* Get All Db Post*/
 exports.getAllPost = async (req, res) => {
-  const allPost = await postModel.find({});
+  try {
+    const allPost = await postModel.find({});
 
-  const userData = [];
-
-  for (i = 0; i < allPost.length; i++) {
-    for (j = 0; j < allPost[i].postName.length; j++) {
-      allPost[i].postName[j] =
-        "http://Localhost:3000/userPost/" + allPost[i].postName[j];
-    }
-    userData.push(data[i]);
+  
+    res.send({
+      Message: "User Data",
+      data: allPost,
+    });
+  } catch (error) {
+    res.send({
+      Error: error.message,
+    });
   }
-
-  res.send({
-    Message: "User Data",
-    data: userData,
-  });
 };
 
-//Post Like
+/*Post Like   In Progress*/
 exports.likePost = async (req, res) => {
   const likeData = await postModel.findOne({
     _id: req.body.postId,
