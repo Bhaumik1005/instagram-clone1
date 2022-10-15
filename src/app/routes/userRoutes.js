@@ -22,7 +22,7 @@ const router = Router();
 // //[user Register Route]
 // router.post("/signup", multer1, validateRegisterUser, userAuthController.signup);
 
-router.get('/user', userAuthController.user);x
+router.get('/user', userAuthController.user);
 
 
 module.exports = router;
