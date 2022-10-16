@@ -4,9 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "cross-env NODE_ENV=development node src/index.js --exec babel-node --presets env,stage-2",
+    "start": "node src/index.js --exec babel-node --presets env,stage-2",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "heroku-postbuild": "npm run build"
   },
   "author": "",
   "license": "ISC",
