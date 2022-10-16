@@ -73,7 +73,7 @@ export default class userAuthController {
           //           }
           // }
 
-          static async user(req, res){
+          static async user(req, res) {
                     res.send({
                               message: "Your Code Run Complate"
                     })
